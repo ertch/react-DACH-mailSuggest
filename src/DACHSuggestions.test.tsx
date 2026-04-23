@@ -29,7 +29,7 @@ function typeAndBlur(input: HTMLInputElement, value: string) {
     input.dispatchEvent(new Event('change', { bubbles: true }));
   });
   act(() => {
-    jest.advanceTimersByTime(0);
+    vi.advanceTimersByTime(0);
   });
   act(() => {
     input.dispatchEvent(new Event('blur', { bubbles: true }));
@@ -37,8 +37,8 @@ function typeAndBlur(input: HTMLInputElement, value: string) {
 }
 
 describe('DACHSuggestions', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
   test('renders nothing initially', () => {
     render(<TestPage />);
