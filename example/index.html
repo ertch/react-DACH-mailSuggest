@@ -8,7 +8,7 @@
     *, *::before, *::after { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 520px;
+      max-width: 560px;
       margin: 40px auto;
       padding: 0 20px;
       color: #1e293b;
@@ -37,8 +37,22 @@
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
     .email-warning { color: #b45309; font-size: 0.85rem; margin-top: 6px; }
-    .email-suggestion { color: #2563eb; cursor: pointer; text-decoration: underline; font-weight: 500; }
+    .email-suggestion {
+      color: #2563eb;
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: 500;
+      background: none;
+      border: 0;
+      padding: 0;
+      font: inherit;
+    }
     .email-suggestion:hover { color: #1d4ed8; }
+    .email-suggestion:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
     pre {
       background: #f1f5f9;
       border-radius: 6px;
@@ -51,6 +65,27 @@
     .try h3 { font-size: 0.9rem; margin: 0 0 8px; }
     .try ul { margin: 0; padding-left: 20px; font-size: 0.85rem; color: #475569; line-height: 1.8; }
     .try code { background: #e2e8f0; padding: 2px 5px; border-radius: 3px; font-size: 0.8rem; }
+    .log {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.75rem;
+      color: #475569;
+      min-height: 60px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+    .log-empty { color: #94a3b8; font-style: italic; }
+    .log-entry { padding: 2px 0; }
+    .log-entry .tag {
+      display: inline-block;
+      width: 70px;
+      font-weight: 600;
+      color: #2563eb;
+    }
+    .log-entry.accept .tag { color: #059669; }
     footer { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 2rem; }
   </style>
 </head>
@@ -65,16 +100,37 @@
   </div>
 
   <div class="demo">
-    <label for="email2">Custom warningText</label>
+    <label for="email2">Custom warningText &amp; suffixText</label>
     <div id="root2"></div>
   </div>
 
-  <pre><code>&lt;input type="email" data-dach-suggestion="mailCheck" /&gt;
+  <div class="demo">
+    <label for="email3">Custom domains list (adds <code>company.de</code>)</label>
+    <div id="root3"></div>
+    <p class="subtitle" style="margin-top: 8px; margin-bottom: 0;">Try: <code>alice@cmopany.de</code></p>
+  </div>
+
+  <div class="demo">
+    <label for="email4">Callbacks (onSuggest / onAccept)</label>
+    <div id="root4"></div>
+  </div>
+
+  <pre><code>import { DACHSuggestions, DACH_DOMAINS } from 'dach-email-suggestion';
+
+&lt;input type="email" data-dach-suggestion="mailCheck" /&gt;
 &lt;DACHSuggestions id="mailCheck" /&gt;
 
 &lt;!-- Custom text --&gt;
-&lt;input type="email" data-dach-suggestion="mailCheck2" /&gt;
-&lt;DACHSuggestions id="mailCheck2" warningText="Did you mean " /&gt;</code></pre>
+&lt;DACHSuggestions id="mailCheck" warningText="Did you mean " suffixText="." /&gt;
+
+&lt;!-- Extend the domain list --&gt;
+&lt;DACHSuggestions id="mailCheck" domains={[...DACH_DOMAINS, 'company.de']} /&gt;
+
+&lt;!-- Callbacks for analytics --&gt;
+&lt;DACHSuggestions id="mailCheck"
+  onSuggest={(s) =&gt; track('email_typo_suggested', { s })}
+  onAccept={(v) =&gt; track('email_typo_fixed', { v })}
+/&gt;</code></pre>
 
   <div class="try">
     <h3>Try these typos:</h3>
@@ -86,6 +142,8 @@
       <li><code>hi@outlok.com</code> &rarr; outlook.com</li>
       <li><code>yo@yahooo.com</code> &rarr; yahoo.com</li>
       <li><code>me@web.dd</code> &rarr; web.de</li>
+      <li><code>hallo@tutaota.de</code> &rarr; tutanota.de <em>(new)</em></li>
+      <li><code>team@bluemial.ch</code> &rarr; bluemail.ch <em>(new)</em></li>
     </ul>
   </div>
 
@@ -100,15 +158,21 @@
     // -- Inlined library for standalone demo --
 
     const DACH_DOMAINS = [
-      'gmx.de','gmx.net','web.de','t-online.de','freenet.de','posteo.de',
-      'mailbox.org','1und1.de','ionos.de','arcor.de','vodafone.de','o2online.de',
+      // Germany
+      'gmx.de','gmx.net','gmx.com','web.de','mail.de','kabelmail.de',
+      't-online.de','freenet.de','posteo.de','mailbox.org',
+      'tutanota.com','tutanota.de','1und1.de','ionos.de','arcor.de',
+      'vodafone.de','o2online.de',
+      // Austria
       'gmx.at','aon.at','a1.net','chello.at','three.at','magenta.at',
-      'gmx.ch','bluewin.ch','sunrise.ch','hispeed.ch','swissonline.ch',
+      'inode.at','live.at',
+      // Switzerland
+      'gmx.ch','bluewin.ch','bluemail.ch','sunrise.ch','hispeed.ch','swissonline.ch',
+      // International
       'gmail.com','googlemail.com','outlook.com','outlook.de','hotmail.com',
       'hotmail.de','live.com','live.de','yahoo.com','yahoo.de','icloud.com',
       'me.com','protonmail.com','proton.me',
     ];
-    const KNOWN = new Set(DACH_DOMAINS);
 
     function damerauLev(a, b, max) {
       if (a.length > b.length) [a, b] = [b, a];
@@ -131,12 +195,13 @@
       return p[n];
     }
 
-    function findClosest(domain, max=2) {
+    function findClosest(domain, max = 2, domains = DACH_DOMAINS) {
       if (!domain) return null;
       const d = domain.toLowerCase();
-      if (KNOWN.has(d)) return null;
+      const known = new Set(domains.map(x => x.toLowerCase()));
+      if (known.has(d)) return null;
       let bd = max+1, bm = null;
-      for (const p of DACH_DOMAINS) {
+      for (const p of domains) {
         const dist = damerauLev(d, p, max);
         if (dist<bd) { bd=dist; bm=p; if (bd===1) break; }
       }
@@ -145,22 +210,38 @@
 
     // -- The DACHSuggestions component --
 
-    function DACHSuggestions({ id, debounceMs = 300, maxDistance = 2, warningText }) {
+    function DACHSuggestions({
+      id,
+      debounceMs = 300,
+      maxDistance = 2,
+      warningText,
+      suffixText = '?',
+      domains,
+      disabled = false,
+      onSuggest,
+      onAccept,
+    }) {
       const label = warningText ?? 'Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: ';
       const [suggestion, setSuggestion] = useState(null);
       const timerRef = useRef(null);
       const inputRef = useRef(null);
+      const onSuggestRef = useRef(onSuggest);
+      onSuggestRef.current = onSuggest;
 
       const compute = useCallback((v) => {
         const at = v.indexOf('@');
         if (at===-1||at===v.length-1) { setSuggestion(null); return; }
-        const match = findClosest(v.substring(at+1), maxDistance);
-        setSuggestion(match ? v.substring(0,at+1)+match : null);
-      }, [maxDistance]);
+        const match = findClosest(v.substring(at+1), maxDistance, domains);
+        const next = match ? v.substring(0,at+1)+match : null;
+        setSuggestion(next);
+        if (next) onSuggestRef.current?.(next);
+      }, [maxDistance, domains]);
 
       useEffect(() => {
-        const input = document.querySelector(`[data-dach-suggestion="${id}"]`);
-        if (!input) return;
+        if (disabled) return;
+        const matches = document.querySelectorAll(`[data-dach-suggestion="${CSS.escape(id)}"]`);
+        if (!matches.length) return;
+        const input = matches[0];
         inputRef.current = input;
         const onInput = () => {
           const v = input.value, at = v.indexOf('@');
@@ -172,30 +253,31 @@
         input.addEventListener('input', onInput);
         input.addEventListener('blur', onBlur);
         return () => { input.removeEventListener('input', onInput); input.removeEventListener('blur', onBlur); if (timerRef.current) clearTimeout(timerRef.current); };
-      }, [id, debounceMs, compute]);
+      }, [id, debounceMs, compute, disabled]);
 
       const apply = () => {
         if (!suggestion || !inputRef.current) return;
         const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
         if (set) { set.call(inputRef.current, suggestion); inputRef.current.dispatchEvent(new Event('input',{bubbles:true})); }
         else inputRef.current.value = suggestion;
+        onAccept?.(suggestion);
         setSuggestion(null);
       };
 
       if (!suggestion) return null;
 
       return (
-        <div className="email-warning">
+        <div className="email-warning" role="status" aria-live="polite">
           {label}
-          <span className="email-suggestion" role="button" tabIndex={0} onClick={apply}
-            onKeyDown={e => { if (e.key==='Enter'||e.key===' ') apply(); }}>
+          <button type="button" className="email-suggestion" onClick={apply}>
             {suggestion}
-          </span>?
+          </button>{suffixText}
         </div>
       );
     }
 
-    // -- Demo --
+    // -- Demos --
+
     function Demo1() {
       return (
         <>
@@ -209,13 +291,49 @@
       return (
         <>
           <input type="email" data-dach-suggestion="mailCheck2" id="email2" placeholder="user@outlok.com" />
-          <DACHSuggestions id="mailCheck2" warningText="Did you mean " />
+          <DACHSuggestions id="mailCheck2" warningText="Did you mean " suffixText="." />
+        </>
+      );
+    }
+
+    function Demo3() {
+      const domains = [...DACH_DOMAINS, 'company.de'];
+      return (
+        <>
+          <input type="email" data-dach-suggestion="mailCheck3" id="email3" placeholder="alice@cmopany.de" />
+          <DACHSuggestions id="mailCheck3" domains={domains} />
+        </>
+      );
+    }
+
+    function Demo4() {
+      const [log, setLog] = useState([]);
+      const push = (type, value) => setLog(l => [...l.slice(-4), { type, value, at: Date.now() }]);
+      return (
+        <>
+          <input type="email" data-dach-suggestion="mailCheck4" id="email4" placeholder="max@gmial.com" />
+          <DACHSuggestions
+            id="mailCheck4"
+            onSuggest={(s) => push('suggest', s)}
+            onAccept={(v) => push('accept', v)}
+          />
+          <div className="log">
+            {log.length === 0
+              ? <div className="log-empty">no events yet — type an email above</div>
+              : log.map((e, i) => (
+                  <div key={i} className={`log-entry ${e.type}`}>
+                    <span className="tag">{e.type}</span>{e.value}
+                  </div>
+                ))}
+          </div>
         </>
       );
     }
 
     ReactDOM.createRoot(document.getElementById('root')).render(<Demo1 />);
     ReactDOM.createRoot(document.getElementById('root2')).render(<Demo2 />);
+    ReactDOM.createRoot(document.getElementById('root3')).render(<Demo3 />);
+    ReactDOM.createRoot(document.getElementById('root4')).render(<Demo4 />);
   </script>
 </body>
 </html>
