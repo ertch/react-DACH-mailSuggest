@@ -1,6 +1,6 @@
 # D-A-CH Email Suggestion
 
-Drop-in React component that catches email domain typos for the D-A-CH region.
+React library that catches email domain typos for the D-A-CH region.
 
 ## Install
 
@@ -10,68 +10,135 @@ npm install dach-email-suggestion
 
 ## Usage
 
-```tsx
-import { DACHSuggestions } from 'dach-email-suggestion';
+The library ships two idiomatic APIs — a render component and a bare hook — plus a legacy wrapper for gradual migration.
 
-<input type="email" data-dach-suggestion="mailCheck" />
-<DACHSuggestions id="mailCheck" />
+### `<EmailSuggestion>` — controlled render component
+
+Bring your own input. The component only renders the warning.
+
+```tsx
+import { useState } from 'react';
+import { EmailSuggestion } from 'dach-email-suggestion';
+
+function SignUp() {
+  const [email, setEmail] = useState('');
+
+  return (
+    <>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <EmailSuggestion email={email} onAccept={setEmail} />
+    </>
+  );
+}
 ```
 
-That's it. The component:
+Works with any input component — Mantine, MUI, headless libraries, masked inputs, `react-hook-form`, Formik — because we never touch the input element.
 
-1. Finds the linked input via `data-dach-suggestion`
-2. On blur, checks for typos using Damerau-Levenshtein distance
-3. Shows a clickable correction: _"Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: user@gmail.com?"_
-4. Clicking the suggestion writes the corrected value back into the input
+### `useEmailSuggestion` — headless hook
 
-## Props
+Render the warning yourself:
+
+```tsx
+import { useEmailSuggestion } from 'dach-email-suggestion';
+
+function SignUp() {
+  const [email, setEmail] = useState('');
+  const { suggestion, getCorrected } = useEmailSuggestion(email);
+
+  const handleSubmit = () => {
+    const corrected = getCorrected();
+    if (corrected) {
+      // Typo detected even if user submitted before debounce fired
+      return ask(`Meinten Sie ${corrected}?`);
+    }
+    submit(email);
+  };
+
+  return (
+    <>
+      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      {suggestion && (
+        <p>Meinten Sie <button onClick={() => setEmail(suggestion)}>{suggestion}</button>?</p>
+      )}
+    </>
+  );
+}
+```
+
+`getCorrected()` bypasses the debounce and returns the answer synchronously — handy at submit-time.
+
+### Hook Return
+
+| Field | Type | Description |
+|---|---|---|
+| `suggestion` | `string \| null` | Debounced current suggestion |
+| `getCorrected` | `() => string \| null` | Compute synchronously, ignoring debounce |
+
+### Hook Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxDistance` | `number` | `2` | Max edit distance for typo detection |
+| `debounceMs` | `number` | `300` | Debounce delay in ms. `0` for immediate. |
+| `domains` | `readonly string[]` | `DACH_DOMAINS` | Domain list to check against |
+| `disabled` | `boolean` | `false` | Skip detection entirely |
+
+### `<EmailSuggestion>` Props
+
+All hook options above, plus:
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `id` | `string` | **required** | Must match `data-dach-suggestion="..."` on your input |
-| `maxDistance` | `number` | `2` | Max edit distance for typo detection |
-| `debounceMs` | `number` | `300` | Debounce delay in ms |
-| `warningClassName` | `string` | `'email-warning'` | CSS class for the warning container |
-| `suggestionClassName` | `string` | `'email-suggestion'` | CSS class for the clickable suggestion |
+| `email` | `string` | **required** | Current email from your state |
+| `onAccept` | `(v: string) => void` | **required** | Called when the user accepts the suggestion |
+| `onSuggest` | `(s: string) => void` | — | Fires whenever a suggestion is displayed |
 | `warningText` | `string` | `'Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: '` | Text before the clickable suggestion |
 | `suffixText` | `string` | `'?'` | Text appended after the suggestion |
-| `domains` | `readonly string[]` | `DACH_DOMAINS` | Domain list to check against |
-| `disabled` | `boolean` | `false` | Disable typo detection |
-| `onSuggest` | `(s: string) => void` | — | Fires when a suggestion is displayed |
-| `onAccept` | `(v: string) => void` | — | Fires when the user accepts the suggestion |
+| `warningClassName` | `string` | `'email-warning'` | CSS class for the warning container |
+| `suggestionClassName` | `string` | `'email-suggestion'` | CSS class for the clickable suggestion |
+| `render` | `(p: { suggestion, accept }) => ReactNode` | — | Custom renderer; overrides default markup |
 
-## Custom Warning Text
+### Custom rendering via `render` prop
 
 ```tsx
-<DACHSuggestions id="mailCheck" warningText="Did you mean " />
-// → "Did you mean user@gmail.com?"
-
-<DACHSuggestions id="mailCheck" warningText="Meinten Sie vielleicht " />
-// → "Meinten Sie vielleicht user@gmail.com?"
+<EmailSuggestion
+  email={email}
+  onAccept={setEmail}
+  render={({ suggestion, accept }) => (
+    <Alert severity="warning" action={<Button onClick={accept}>Übernehmen</Button>}>
+      Typo? Wir vermuten <strong>{suggestion}</strong>
+    </Alert>
+  )}
+/>
 ```
 
-## Extending the Domain List
+### Extending the domain list
 
 Import `DACH_DOMAINS` and spread to add your own entries — no implicit merging:
 
 ```tsx
-import { DACHSuggestions, DACH_DOMAINS } from 'dach-email-suggestion';
+import { EmailSuggestion, DACH_DOMAINS } from 'dach-email-suggestion';
 
-<DACHSuggestions
-  id="mailCheck"
+<EmailSuggestion
+  email={email}
+  onAccept={setEmail}
   domains={[...DACH_DOMAINS, 'company.de', 'partner.ch']}
 />
 ```
 
-Or replace the list entirely by passing your own array.
+Or pass an entirely custom array to replace the default.
 
-## Callbacks
+### Callbacks for analytics
 
 ```tsx
-<DACHSuggestions
-  id="mailCheck"
-  onSuggest={(suggestion) => analytics.track('email_typo_suggested', { suggestion })}
-  onAccept={(value) => analytics.track('email_typo_fixed', { value })}
+<EmailSuggestion
+  email={email}
+  onAccept={(v) => { setEmail(v); track('email_typo_fixed', { value: v }); }}
+  onSuggest={(s) => track('email_typo_suggested', { suggestion: s })}
 />
 ```
 
@@ -97,6 +164,19 @@ The component ships with minimal inline styles. Override via CSS classes:
   text-decoration: underline;
 }
 ```
+
+## Legacy API: `<DACHSuggestions>`
+
+The original `data-dach-suggestion` + `id` attribute-coupled component is still shipped for backwards compatibility — it is a thin DOM-to-state bridge over the new hook. New code should use `<EmailSuggestion>` or `useEmailSuggestion`.
+
+```tsx
+import { DACHSuggestions } from 'dach-email-suggestion';
+
+<input type="email" data-dach-suggestion="mailCheck" />
+<DACHSuggestions id="mailCheck" />
+```
+
+Accepts all hook options (`maxDistance`, `debounceMs`, `domains`, `disabled`) plus the same text/class/callback props as `<EmailSuggestion>`.
 
 ## Supported Domains
 

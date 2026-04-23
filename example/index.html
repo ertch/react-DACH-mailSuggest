@@ -8,22 +8,35 @@
     *, *::before, *::after { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 560px;
+      max-width: 620px;
       margin: 40px auto;
       padding: 0 20px;
       color: #1e293b;
       background: #f8fafc;
     }
-    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
-    .subtitle { color: #64748b; margin-bottom: 2rem; font-size: 0.9rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1rem; color: #334155; margin: 2rem 0 0.75rem; padding-bottom: 4px; border-bottom: 1px solid #e2e8f0; }
+    h2 .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+      vertical-align: middle;
+      font-weight: 500;
+    }
+    .badge.new { background: #dcfce7; color: #166534; }
+    .badge.legacy { background: #fee2e2; color: #991b1b; }
+    .subtitle { color: #64748b; margin-bottom: 1.5rem; font-size: 0.9rem; }
     .demo {
       background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
-      padding: 24px;
-      margin-bottom: 24px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
     }
-    label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #475569; }
+    .demo-title { font-size: 0.85rem; font-weight: 500; margin-bottom: 10px; color: #475569; }
+    .demo-title code { background: #e2e8f0; padding: 1px 6px; border-radius: 3px; font-size: 0.8rem; }
     input[type="email"] {
       width: 100%;
       padding: 10px 12px;
@@ -56,12 +69,13 @@
     pre {
       background: #f1f5f9;
       border-radius: 6px;
-      padding: 16px;
-      font-size: 0.8rem;
+      padding: 14px 16px;
+      font-size: 0.78rem;
       overflow-x: auto;
       line-height: 1.5;
+      margin-top: 10px;
     }
-    .try { margin-top: 1.5rem; }
+    .try { margin-top: 1.5rem; padding: 16px 20px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; }
     .try h3 { font-size: 0.9rem; margin: 0 0 8px; }
     .try ul { margin: 0; padding-left: 20px; font-size: 0.85rem; color: #475569; line-height: 1.8; }
     .try code { background: #e2e8f0; padding: 2px 5px; border-radius: 3px; font-size: 0.8rem; }
@@ -73,77 +87,88 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.75rem;
       color: #475569;
-      min-height: 60px;
-      max-height: 140px;
+      min-height: 48px;
+      max-height: 120px;
       overflow-y: auto;
     }
     .log-empty { color: #94a3b8; font-style: italic; }
     .log-entry { padding: 2px 0; }
-    .log-entry .tag {
-      display: inline-block;
-      width: 70px;
-      font-weight: 600;
-      color: #2563eb;
-    }
+    .log-entry .tag { display: inline-block; width: 70px; font-weight: 600; color: #2563eb; }
     .log-entry.accept .tag { color: #059669; }
+    .submit-row { display: flex; gap: 8px; margin-top: 10px; }
+    .submit-row button {
+      padding: 8px 14px;
+      border: 1px solid #3b82f6;
+      background: #3b82f6;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .submit-row button:hover { background: #2563eb; }
+    .submit-feedback { font-size: 0.8rem; color: #b45309; padding-top: 8px; min-height: 18px; }
+    .submit-feedback.ok { color: #059669; }
     footer { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 2rem; }
   </style>
 </head>
 <body>
 
   <h1>D-A-CH Email Suggestion</h1>
-  <p class="subtitle">Drop-in typo correction for email inputs</p>
+  <p class="subtitle">Typo correction for email inputs</p>
+
+  <h2>New API <span class="badge new">recommended</span></h2>
 
   <div class="demo">
-    <label for="email">Default</label>
-    <div id="root"></div>
+    <div class="demo-title">1. <code>&lt;EmailSuggestion&gt;</code> — controlled, bring your own input</div>
+    <div id="demo-controlled"></div>
   </div>
 
   <div class="demo">
-    <label for="email2">Custom warningText &amp; suffixText</label>
-    <div id="root2"></div>
+    <div class="demo-title">2. <code>useEmailSuggestion</code> hook — custom rendering, submit-guard via <code>getCorrected()</code></div>
+    <div id="demo-hook"></div>
+  </div>
+
+  <pre><code>import { EmailSuggestion, useEmailSuggestion, DACH_DOMAINS } from 'dach-email-suggestion';
+
+// 1. Render component
+const [email, setEmail] = useState('');
+&lt;input value={email} onChange={e =&gt; setEmail(e.target.value)} /&gt;
+&lt;EmailSuggestion email={email} onAccept={setEmail} /&gt;
+
+// 2. Headless hook — synchronous submit check
+const { suggestion, getCorrected } = useEmailSuggestion(email);
+if (getCorrected()) askUserBeforeSubmitting();</code></pre>
+
+  <h2>Legacy API <span class="badge legacy">compatibility</span></h2>
+
+  <div class="demo">
+    <div class="demo-title">3. <code>&lt;DACHSuggestions id&gt;</code> — backwards-compatible <code>data-*</code> wiring</div>
+    <div id="demo-legacy"></div>
   </div>
 
   <div class="demo">
-    <label for="email3">Custom domains list (adds <code>company.de</code>)</label>
-    <div id="root3"></div>
-    <p class="subtitle" style="margin-top: 8px; margin-bottom: 0;">Try: <code>alice@cmopany.de</code></p>
-  </div>
-
-  <div class="demo">
-    <label for="email4">Callbacks (onSuggest / onAccept)</label>
-    <div id="root4"></div>
+    <div class="demo-title">4. Legacy with callbacks + extended domain list (adds <code>company.de</code>)</div>
+    <div id="demo-legacy-extras"></div>
   </div>
 
   <pre><code>import { DACHSuggestions, DACH_DOMAINS } from 'dach-email-suggestion';
 
 &lt;input type="email" data-dach-suggestion="mailCheck" /&gt;
-&lt;DACHSuggestions id="mailCheck" /&gt;
-
-&lt;!-- Custom text --&gt;
-&lt;DACHSuggestions id="mailCheck" warningText="Did you mean " suffixText="." /&gt;
-
-&lt;!-- Extend the domain list --&gt;
-&lt;DACHSuggestions id="mailCheck" domains={[...DACH_DOMAINS, 'company.de']} /&gt;
-
-&lt;!-- Callbacks for analytics --&gt;
 &lt;DACHSuggestions id="mailCheck"
-  onSuggest={(s) =&gt; track('email_typo_suggested', { s })}
-  onAccept={(v) =&gt; track('email_typo_fixed', { v })}
+  domains={[...DACH_DOMAINS, 'company.de']}
+  onSuggest={track}
 /&gt;</code></pre>
 
   <div class="try">
     <h3>Try these typos:</h3>
     <ul>
       <li><code>kunde@gmial.com</code> &rarr; gmail.com</li>
-      <li><code>user@gmal.com</code> &rarr; gmail.com</li>
       <li><code>info@gmx.ed</code> &rarr; gmx.de</li>
-      <li><code>test@hotmal.com</code> &rarr; hotmail.com</li>
       <li><code>hi@outlok.com</code> &rarr; outlook.com</li>
-      <li><code>yo@yahooo.com</code> &rarr; yahoo.com</li>
       <li><code>me@web.dd</code> &rarr; web.de</li>
-      <li><code>hallo@tutaota.de</code> &rarr; tutanota.de <em>(new)</em></li>
-      <li><code>team@bluemial.ch</code> &rarr; bluemail.ch <em>(new)</em></li>
+      <li><code>hallo@tutaota.de</code> &rarr; tutanota.de</li>
+      <li><code>team@bluemial.ch</code> &rarr; bluemail.ch</li>
+      <li><code>alice@cmopany.de</code> &rarr; company.de (in demo 4)</li>
     </ul>
   </div>
 
@@ -155,20 +180,16 @@
   <script type="text/babel">
     const { useState, useRef, useEffect, useCallback } = React;
 
-    // -- Inlined library for standalone demo --
+    // ==== Inlined library ====
 
     const DACH_DOMAINS = [
-      // Germany
       'gmx.de','gmx.net','gmx.com','web.de','mail.de','kabelmail.de',
       't-online.de','freenet.de','posteo.de','mailbox.org',
       'tutanota.com','tutanota.de','1und1.de','ionos.de','arcor.de',
       'vodafone.de','o2online.de',
-      // Austria
       'gmx.at','aon.at','a1.net','chello.at','three.at','magenta.at',
       'inode.at','live.at',
-      // Switzerland
       'gmx.ch','bluewin.ch','bluemail.ch','sunrise.ch','hispeed.ch','swissonline.ch',
-      // International
       'gmail.com','googlemail.com','outlook.com','outlook.de','hotmail.com',
       'hotmail.de','live.com','live.de','yahoo.com','yahoo.de','icloud.com',
       'me.com','protonmail.com','proton.me',
@@ -208,112 +229,185 @@
       return bd<=max ? bm : null;
     }
 
-    // -- The DACHSuggestions component --
+    function computePure(email, max, domains) {
+      const at = email.indexOf('@');
+      if (at === -1 || at === email.length - 1) return null;
+      const match = findClosest(email.substring(at+1), max, domains);
+      return match ? email.substring(0, at+1) + match : null;
+    }
 
-    function DACHSuggestions({
-      id,
-      debounceMs = 300,
-      maxDistance = 2,
-      warningText,
-      suffixText = '?',
-      domains,
-      disabled = false,
-      onSuggest,
-      onAccept,
-    }) {
-      const label = warningText ?? 'Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: ';
+    // ---- Hook ----
+    function useEmailSuggestion(email, { maxDistance = 2, debounceMs = 300, domains, disabled = false } = {}) {
       const [suggestion, setSuggestion] = useState(null);
       const timerRef = useRef(null);
-      const inputRef = useRef(null);
-      const onSuggestRef = useRef(onSuggest);
-      onSuggestRef.current = onSuggest;
-
-      const compute = useCallback((v) => {
-        const at = v.indexOf('@');
-        if (at===-1||at===v.length-1) { setSuggestion(null); return; }
-        const match = findClosest(v.substring(at+1), maxDistance, domains);
-        const next = match ? v.substring(0,at+1)+match : null;
-        setSuggestion(next);
-        if (next) onSuggestRef.current?.(next);
-      }, [maxDistance, domains]);
+      const emailRef = useRef(email); emailRef.current = email;
+      const maxRef = useRef(maxDistance); maxRef.current = maxDistance;
+      const domainsRef = useRef(domains); domainsRef.current = domains;
 
       useEffect(() => {
-        if (disabled) return;
-        const matches = document.querySelectorAll(`[data-dach-suggestion="${CSS.escape(id)}"]`);
-        if (!matches.length) return;
-        const input = matches[0];
-        inputRef.current = input;
-        const onInput = () => {
-          const v = input.value, at = v.indexOf('@');
-          if (timerRef.current) clearTimeout(timerRef.current);
-          if (at!==-1 && at<v.length-1) timerRef.current = setTimeout(()=>compute(v), debounceMs);
-          else setSuggestion(null);
-        };
-        const onBlur = () => { if (timerRef.current) clearTimeout(timerRef.current); compute(input.value); };
-        input.addEventListener('input', onInput);
-        input.addEventListener('blur', onBlur);
-        return () => { input.removeEventListener('input', onInput); input.removeEventListener('blur', onBlur); if (timerRef.current) clearTimeout(timerRef.current); };
-      }, [id, debounceMs, compute, disabled]);
+        if (disabled) { setSuggestion(null); return; }
+        const run = () => setSuggestion(computePure(email, maxDistance, domains));
+        if (debounceMs <= 0) { run(); return; }
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(run, debounceMs);
+        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+      }, [email, maxDistance, debounceMs, disabled, domains]);
 
-      const apply = () => {
-        if (!suggestion || !inputRef.current) return;
-        const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
-        if (set) { set.call(inputRef.current, suggestion); inputRef.current.dispatchEvent(new Event('input',{bubbles:true})); }
-        else inputRef.current.value = suggestion;
-        onAccept?.(suggestion);
-        setSuggestion(null);
-      };
+      const getCorrected = () =>
+        disabled ? null : computePure(emailRef.current, maxRef.current, domainsRef.current);
+
+      return { suggestion, getCorrected };
+    }
+
+    // ---- EmailSuggestion component ----
+    function EmailSuggestion({
+      email, onAccept, onSuggest,
+      warningClassName = 'email-warning',
+      suggestionClassName = 'email-suggestion',
+      warningText, suffixText = '?', render,
+      ...hookOpts
+    }) {
+      const { suggestion } = useEmailSuggestion(email, hookOpts);
+      const onSuggestRef = useRef(onSuggest); onSuggestRef.current = onSuggest;
+      useEffect(() => { if (suggestion) onSuggestRef.current?.(suggestion); }, [suggestion]);
 
       if (!suggestion) return null;
+      const accept = () => onAccept(suggestion);
+      if (render) return render({ suggestion, accept });
 
+      const label = warningText ?? 'Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: ';
       return (
-        <div className="email-warning" role="status" aria-live="polite">
+        <div className={warningClassName} role="status" aria-live="polite">
           {label}
-          <button type="button" className="email-suggestion" onClick={apply}>
+          <button type="button" className={suggestionClassName} onClick={accept}>
             {suggestion}
           </button>{suffixText}
         </div>
       );
     }
 
-    // -- Demos --
+    // ---- DACHSuggestions (legacy bridge) ----
+    function DACHSuggestions({
+      id, debounceMs = 300, maxDistance = 2, warningText, suffixText,
+      domains, disabled = false, onSuggest, onAccept,
+    }) {
+      const [email, setEmail] = useState('');
+      const timerRef = useRef(null);
+      const inputRef = useRef(null);
 
-    function Demo1() {
+      useEffect(() => {
+        if (disabled) return;
+        const matches = document.querySelectorAll(`[data-dach-suggestion="${CSS.escape(id)}"]`);
+        if (!matches.length) return;
+        const input = matches[0]; inputRef.current = input; setEmail(input.value);
+        const onInput = () => {
+          if (timerRef.current) clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => setEmail(input.value), debounceMs);
+        };
+        const onBlur = () => { if (timerRef.current) clearTimeout(timerRef.current); setEmail(input.value); };
+        input.addEventListener('input', onInput);
+        input.addEventListener('blur', onBlur);
+        return () => {
+          input.removeEventListener('input', onInput);
+          input.removeEventListener('blur', onBlur);
+          if (timerRef.current) clearTimeout(timerRef.current);
+        };
+      }, [id, debounceMs, disabled]);
+
+      const handleAccept = useCallback((corrected) => {
+        if (inputRef.current) {
+          const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+          if (set) { set.call(inputRef.current, corrected); inputRef.current.dispatchEvent(new Event('input',{bubbles:true})); }
+          else inputRef.current.value = corrected;
+        }
+        setEmail(corrected);
+        onAccept?.(corrected);
+      }, [onAccept]);
+
+      return (
+        <EmailSuggestion
+          email={email} onAccept={handleAccept} onSuggest={onSuggest}
+          maxDistance={maxDistance} debounceMs={0} domains={domains} disabled={disabled}
+          warningText={warningText} suffixText={suffixText}
+        />
+      );
+    }
+
+    // ==== Demos ====
+
+    function DemoControlled() {
+      const [email, setEmail] = useState('');
       return (
         <>
-          <input type="email" data-dach-suggestion="mailCheck" id="email" placeholder="kunde@gmial.com" />
-          <DACHSuggestions id="mailCheck" />
+          <input
+            type="email"
+            placeholder="kunde@gmial.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <EmailSuggestion email={email} onAccept={setEmail} />
         </>
       );
     }
 
-    function Demo2() {
+    function DemoHook() {
+      const [email, setEmail] = useState('');
+      const [feedback, setFeedback] = useState('');
+      const { suggestion, getCorrected } = useEmailSuggestion(email);
+
+      const handleSubmit = () => {
+        const fix = getCorrected();
+        if (fix) {
+          setFeedback(`Typo erkannt — meintest du ${fix}?`);
+          return;
+        }
+        if (!email.includes('@')) {
+          setFeedback('Keine gültige E-Mail.');
+          return;
+        }
+        setFeedback('✓ abgesendet: ' + email);
+      };
+
       return (
         <>
-          <input type="email" data-dach-suggestion="mailCheck2" id="email2" placeholder="user@outlok.com" />
-          <DACHSuggestions id="mailCheck2" warningText="Did you mean " suffixText="." />
+          <input
+            type="email"
+            placeholder="z.B. max@gmial.com — dann direkt auf Absenden klicken"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setFeedback(''); }}
+          />
+          {suggestion && (
+            <p style={{ fontSize: '0.85rem', color: '#b45309', marginTop: 6 }}>
+              Custom rendering: <button className="email-suggestion" onClick={() => { setEmail(suggestion); setFeedback(''); }}>{suggestion}</button> übernehmen?
+            </p>
+          )}
+          <div className="submit-row">
+            <button type="button" onClick={handleSubmit}>Absenden</button>
+          </div>
+          <div className={`submit-feedback ${feedback.startsWith('✓') ? 'ok' : ''}`}>{feedback}</div>
         </>
       );
     }
 
-    function Demo3() {
+    function DemoLegacy() {
+      return (
+        <>
+          <input type="email" data-dach-suggestion="legacy1" placeholder="user@outlok.com" />
+          <DACHSuggestions id="legacy1" />
+        </>
+      );
+    }
+
+    function DemoLegacyExtras() {
+      const [log, setLog] = useState([]);
+      const push = (type, value) => setLog(l => [...l.slice(-3), { type, value }]);
       const domains = [...DACH_DOMAINS, 'company.de'];
       return (
         <>
-          <input type="email" data-dach-suggestion="mailCheck3" id="email3" placeholder="alice@cmopany.de" />
-          <DACHSuggestions id="mailCheck3" domains={domains} />
-        </>
-      );
-    }
-
-    function Demo4() {
-      const [log, setLog] = useState([]);
-      const push = (type, value) => setLog(l => [...l.slice(-4), { type, value, at: Date.now() }]);
-      return (
-        <>
-          <input type="email" data-dach-suggestion="mailCheck4" id="email4" placeholder="max@gmial.com" />
+          <input type="email" data-dach-suggestion="legacy2" placeholder="alice@cmopany.de" />
           <DACHSuggestions
-            id="mailCheck4"
+            id="legacy2"
+            domains={domains}
             onSuggest={(s) => push('suggest', s)}
             onAccept={(v) => push('accept', v)}
           />
@@ -330,10 +424,10 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<Demo1 />);
-    ReactDOM.createRoot(document.getElementById('root2')).render(<Demo2 />);
-    ReactDOM.createRoot(document.getElementById('root3')).render(<Demo3 />);
-    ReactDOM.createRoot(document.getElementById('root4')).render(<Demo4 />);
+    ReactDOM.createRoot(document.getElementById('demo-controlled')).render(<DemoControlled />);
+    ReactDOM.createRoot(document.getElementById('demo-hook')).render(<DemoHook />);
+    ReactDOM.createRoot(document.getElementById('demo-legacy')).render(<DemoLegacy />);
+    ReactDOM.createRoot(document.getElementById('demo-legacy-extras')).render(<DemoLegacyExtras />);
   </script>
 </body>
 </html>
