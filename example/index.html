@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D-A-CH Email Suggestion – Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 520px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #1e293b;
+      background: #f8fafc;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; margin-bottom: 2rem; font-size: 0.9rem; }
+    .demo {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #475569; }
+    input[type="email"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+    }
+    input[type="email"]:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .email-warning { color: #b45309; font-size: 0.85rem; margin-top: 6px; }
+    .email-suggestion { color: #2563eb; cursor: pointer; text-decoration: underline; font-weight: 500; }
+    .email-suggestion:hover { color: #1d4ed8; }
+    pre {
+      background: #f1f5f9;
+      border-radius: 6px;
+      padding: 16px;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+    .try { margin-top: 1.5rem; }
+    .try h3 { font-size: 0.9rem; margin: 0 0 8px; }
+    .try ul { margin: 0; padding-left: 20px; font-size: 0.85rem; color: #475569; line-height: 1.8; }
+    .try code { background: #e2e8f0; padding: 2px 5px; border-radius: 3px; font-size: 0.8rem; }
+    footer { text-align: center; color: #94a3b8; font-size: 0.8rem; margin-top: 2rem; }
+  </style>
+</head>
+<body>
+
+  <h1>D-A-CH Email Suggestion</h1>
+  <p class="subtitle">Drop-in typo correction for email inputs</p>
+
+  <div class="demo">
+    <label for="email">Default</label>
+    <div id="root"></div>
+  </div>
+
+  <div class="demo">
+    <label for="email2">Custom warningText</label>
+    <div id="root2"></div>
+  </div>
+
+  <pre><code>&lt;input type="email" data-dach-suggestion="mailCheck" /&gt;
+&lt;DACHSuggestions id="mailCheck" /&gt;
+
+&lt;!-- Custom text --&gt;
+&lt;input type="email" data-dach-suggestion="mailCheck2" /&gt;
+&lt;DACHSuggestions id="mailCheck2" warningText="Did you mean " /&gt;</code></pre>
+
+  <div class="try">
+    <h3>Try these typos:</h3>
+    <ul>
+      <li><code>kunde@gmial.com</code> &rarr; gmail.com</li>
+      <li><code>user@gmal.com</code> &rarr; gmail.com</li>
+      <li><code>info@gmx.ed</code> &rarr; gmx.de</li>
+      <li><code>test@hotmal.com</code> &rarr; hotmail.com</li>
+      <li><code>hi@outlok.com</code> &rarr; outlook.com</li>
+      <li><code>yo@yahooo.com</code> &rarr; yahoo.com</li>
+      <li><code>me@web.dd</code> &rarr; web.de</li>
+    </ul>
+  </div>
+
+  <footer>dach-email-suggestion &middot; Zero dependencies &middot; Damerau-Levenshtein</footer>
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useRef, useEffect, useCallback } = React;
+
+    // -- Inlined library for standalone demo --
+
+    const DACH_DOMAINS = [
+      'gmx.de','gmx.net','web.de','t-online.de','freenet.de','posteo.de',
+      'mailbox.org','1und1.de','ionos.de','arcor.de','vodafone.de','o2online.de',
+      'gmx.at','aon.at','a1.net','chello.at','three.at','magenta.at',
+      'gmx.ch','bluewin.ch','sunrise.ch','hispeed.ch','swissonline.ch',
+      'gmail.com','googlemail.com','outlook.com','outlook.de','hotmail.com',
+      'hotmail.de','live.com','live.de','yahoo.com','yahoo.de','icloud.com',
+      'me.com','protonmail.com','proton.me',
+    ];
+    const KNOWN = new Set(DACH_DOMAINS);
+
+    function damerauLev(a, b, max) {
+      if (a.length > b.length) [a, b] = [b, a];
+      const n = a.length, m = b.length;
+      if (n === 0) return max != null ? Math.min(m, max + 1) : m;
+      if (max != null && (m - n) > max) return max + 1;
+      let pp = new Array(n+1), p = new Array(n+1), c = new Array(n+1);
+      for (let i = 0; i <= n; i++) p[i] = i;
+      for (let j = 1; j <= m; j++) {
+        c[0] = j; let rm = j;
+        for (let i = 1; i <= n; i++) {
+          const cost = a[i-1]===b[j-1]?0:1;
+          c[i] = Math.min(c[i-1]+1, p[i]+1, p[i-1]+cost);
+          if (j>1&&i>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1]) c[i]=Math.min(c[i],pp[i-2]+cost);
+          if (c[i]<rm) rm=c[i];
+        }
+        if (max!=null&&rm>max) return max+1;
+        const t=pp; pp=p; p=c; c=t;
+      }
+      return p[n];
+    }
+
+    function findClosest(domain, max=2) {
+      if (!domain) return null;
+      const d = domain.toLowerCase();
+      if (KNOWN.has(d)) return null;
+      let bd = max+1, bm = null;
+      for (const p of DACH_DOMAINS) {
+        const dist = damerauLev(d, p, max);
+        if (dist<bd) { bd=dist; bm=p; if (bd===1) break; }
+      }
+      return bd<=max ? bm : null;
+    }
+
+    // -- The DACHSuggestions component --
+
+    function DACHSuggestions({ id, debounceMs = 300, maxDistance = 2, warningText }) {
+      const label = warningText ?? 'Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: ';
+      const [suggestion, setSuggestion] = useState(null);
+      const timerRef = useRef(null);
+      const inputRef = useRef(null);
+
+      const compute = useCallback((v) => {
+        const at = v.indexOf('@');
+        if (at===-1||at===v.length-1) { setSuggestion(null); return; }
+        const match = findClosest(v.substring(at+1), maxDistance);
+        setSuggestion(match ? v.substring(0,at+1)+match : null);
+      }, [maxDistance]);
+
+      useEffect(() => {
+        const input = document.querySelector(`[data-dach-suggestion="${id}"]`);
+        if (!input) return;
+        inputRef.current = input;
+        const onInput = () => {
+          const v = input.value, at = v.indexOf('@');
+          if (timerRef.current) clearTimeout(timerRef.current);
+          if (at!==-1 && at<v.length-1) timerRef.current = setTimeout(()=>compute(v), debounceMs);
+          else setSuggestion(null);
+        };
+        const onBlur = () => { if (timerRef.current) clearTimeout(timerRef.current); compute(input.value); };
+        input.addEventListener('input', onInput);
+        input.addEventListener('blur', onBlur);
+        return () => { input.removeEventListener('input', onInput); input.removeEventListener('blur', onBlur); if (timerRef.current) clearTimeout(timerRef.current); };
+      }, [id, debounceMs, compute]);
+
+      const apply = () => {
+        if (!suggestion || !inputRef.current) return;
+        const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')?.set;
+        if (set) { set.call(inputRef.current, suggestion); inputRef.current.dispatchEvent(new Event('input',{bubbles:true})); }
+        else inputRef.current.value = suggestion;
+        setSuggestion(null);
+      };
+
+      if (!suggestion) return null;
+
+      return (
+        <div className="email-warning">
+          {label}
+          <span className="email-suggestion" role="button" tabIndex={0} onClick={apply}
+            onKeyDown={e => { if (e.key==='Enter'||e.key===' ') apply(); }}>
+            {suggestion}
+          </span>?
+        </div>
+      );
+    }
+
+    // -- Demo --
+    function Demo1() {
+      return (
+        <>
+          <input type="email" data-dach-suggestion="mailCheck" id="email" placeholder="kunde@gmial.com" />
+          <DACHSuggestions id="mailCheck" />
+        </>
+      );
+    }
+
+    function Demo2() {
+      return (
+        <>
+          <input type="email" data-dach-suggestion="mailCheck2" id="email2" placeholder="user@outlok.com" />
+          <DACHSuggestions id="mailCheck2" warningText="Did you mean " />
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<Demo1 />);
+    ReactDOM.createRoot(document.getElementById('root2')).render(<Demo2 />);
+  </script>
+</body>
+</html>
