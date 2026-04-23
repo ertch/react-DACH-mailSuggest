@@ -1,6 +1,6 @@
 {
   "name": "dach-email-suggestion",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A lightweight React package for email provider suggestions in the D-A-CH region.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
