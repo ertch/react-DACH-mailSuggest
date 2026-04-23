@@ -2,6 +2,7 @@ import {
   damerauLevenshteinDistance,
   findClosestProvider,
   isKnownProvider,
+  DACH_DOMAINS,
 } from './utils';
 
 describe('damerauLevenshteinDistance', () => {
@@ -124,5 +125,28 @@ describe('isKnownProvider', () => {
   test('unknown provider returns false', () => {
     expect(isKnownProvider('unknown.com')).toBe(false);
     expect(isKnownProvider('myprovider.de')).toBe(false);
+  });
+
+  test('custom domain list is respected', () => {
+    expect(isKnownProvider('company.de', ['company.de'])).toBe(true);
+    expect(isKnownProvider('gmail.com', ['company.de'])).toBe(false);
+  });
+});
+
+describe('findClosestProvider with custom domains', () => {
+  test('uses custom list instead of DACH_DOMAINS', () => {
+    const custom = ['company.de', 'partner.ch'];
+    expect(findClosestProvider('cmopany.de', 2, custom)).toBe('company.de');
+    expect(findClosestProvider('partnr.ch', 2, custom)).toBe('partner.ch');
+  });
+
+  test('exact match in custom list returns null', () => {
+    expect(findClosestProvider('company.de', 2, ['company.de'])).toBeNull();
+  });
+
+  test('extended list (DACH + custom) via spread', () => {
+    const extended = [...DACH_DOMAINS, 'company.de'];
+    expect(findClosestProvider('gmial.com', 2, extended)).toBe('gmail.com');
+    expect(findClosestProvider('cmopany.de', 2, extended)).toBe('company.de');
   });
 });
