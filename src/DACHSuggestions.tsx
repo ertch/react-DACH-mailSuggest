@@ -14,6 +14,19 @@ export interface DACHSuggestionsProps {
   suggestionClassName?: string;
   /** Text shown before the clickable suggestion */
   warningText?: string;
+  /** Text appended after the suggestion (default: "?") */
+  suffixText?: string;
+  /**
+   * Domain list to check against. Default: `DACH_DOMAINS`.
+   * Import and spread to extend: `[...DACH_DOMAINS, 'company.com']`.
+   */
+  domains?: readonly string[];
+  /** Disable typo detection (no listeners attached) */
+  disabled?: boolean;
+  /** Fires when a suggestion is displayed */
+  onSuggest?: (suggestion: string) => void;
+  /** Fires when the user accepts the suggestion */
+  onAccept?: (value: string) => void;
 }
 
 const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
@@ -23,23 +36,47 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
   warningClassName = 'email-warning',
   suggestionClassName = 'email-suggestion',
   warningText,
+  suffixText = '?',
+  domains,
+  disabled = false,
+  onSuggest,
+  onAccept,
 }) => {
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  const onSuggestRef = useRef(onSuggest);
+  onSuggestRef.current = onSuggest;
+
   const compute = useCallback((value: string) => {
     const at = value.indexOf('@');
     if (at === -1 || at === value.length - 1) { setSuggestion(null); return; }
     const domain = value.substring(at + 1);
-    const match = findClosestProvider(domain, maxDistance);
-    setSuggestion(match ? value.substring(0, at + 1) + match : null);
-  }, [maxDistance]);
+    const match = findClosestProvider(domain, maxDistance, domains);
+    const next = match ? value.substring(0, at + 1) + match : null;
+    setSuggestion(next);
+    if (next) onSuggestRef.current?.(next);
+  }, [maxDistance, domains]);
 
   useEffect(() => {
+    if (disabled) return;
+    if (typeof document === 'undefined') return;
+
     const escapedId = CSS.escape(id);
-    const input = document.querySelector<HTMLInputElement>(`[data-dach-suggestion="${escapedId}"]`);
-    if (!input) return;
+    const selector = `[data-dach-suggestion="${escapedId}"]`;
+    const matches = document.querySelectorAll<HTMLInputElement>(selector);
+
+    if (matches.length === 0) return;
+    if (matches.length > 1 && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[DACHSuggestions] Multiple inputs share data-dach-suggestion="${id}"; ` +
+        `only the first is tracked. Use a unique id per instance.`
+      );
+    }
+
+    const input = matches[0];
     inputRef.current = input;
 
     const handleInput = () => {
@@ -67,7 +104,7 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
       input.removeEventListener('blur', handleBlur);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [id, debounceMs, compute]);
+  }, [id, debounceMs, compute, disabled]);
 
   const handleApply = useCallback(() => {
     if (!suggestion || !inputRef.current) return;
@@ -80,26 +117,29 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
     } else {
       inputRef.current.value = suggestion;
     }
+    onAccept?.(suggestion);
     setSuggestion(null);
-  }, [suggestion]);
+  }, [suggestion, onAccept]);
 
   const label = warningText ?? 'Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: ';
 
   return suggestion ? (
     <div
       className={warningClassName}
+      role="status"
+      aria-live="polite"
       style={{ color: '#b45309', fontSize: '0.9em', marginTop: '4px' }}
     >
       {label}
-      <span
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
         className={suggestionClassName}
         onClick={handleApply}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') handleApply();
-        }}
         style={{
+          background: 'none',
+          border: 0,
+          padding: 0,
+          font: 'inherit',
           color: '#2563eb',
           cursor: 'pointer',
           textDecoration: 'underline',
@@ -107,8 +147,8 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
         }}
       >
         {suggestion}
-      </span>
-      ?
+      </button>
+      {suffixText}
     </div>
   ) : null;
 };
