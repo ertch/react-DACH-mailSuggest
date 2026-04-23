@@ -1,17 +1,39 @@
 {
   "name": "dach-email-suggestion",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight React package for email provider suggestions in the D-A-CH region.",
   "main": "dist/index.js",
+  "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "test": "jest",
-    "demo": "npx serve example -l 3000 -s"
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
-  "keywords": ["react", "email", "suggestion", "dach", "germany", "austria", "switzerland"],
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "demo": "npx serve example -l 3000 -s",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "keywords": [
+    "react",
+    "email",
+    "suggestion",
+    "dach",
+    "germany",
+    "austria",
+    "switzerland"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "peerDependencies": {
@@ -29,6 +51,7 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "ts-jest": "^29.0.0",
+    "tsup": "^8.5.1",
     "typescript": "^4.9.0"
   }
 }
