@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { findClosestProvider } from './utils';
+import EmailSuggestion from './EmailSuggestion';
 
 export interface DACHSuggestionsProps {
   /** Links this component to an <input data-dach-suggestion="thisId" /> */
@@ -29,35 +29,29 @@ export interface DACHSuggestionsProps {
   onAccept?: (value: string) => void;
 }
 
+/**
+ * @deprecated Prefer `<EmailSuggestion>` or `useEmailSuggestion`.
+ * The `data-dach-suggestion` + `document.querySelector` approach does not
+ * compose well with controlled inputs, form libraries, SSR, or shadow DOM.
+ * This component is kept for backwards compatibility and is internally a
+ * thin DOM-to-state bridge over the new API.
+ */
 const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
   id,
   maxDistance = 2,
   debounceMs = 300,
-  warningClassName = 'email-warning',
-  suggestionClassName = 'email-suggestion',
+  warningClassName,
+  suggestionClassName,
   warningText,
-  suffixText = '?',
+  suffixText,
   domains,
   disabled = false,
   onSuggest,
   onAccept,
 }) => {
-  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const onSuggestRef = useRef(onSuggest);
-  onSuggestRef.current = onSuggest;
-
-  const compute = useCallback((value: string) => {
-    const at = value.indexOf('@');
-    if (at === -1 || at === value.length - 1) { setSuggestion(null); return; }
-    const domain = value.substring(at + 1);
-    const match = findClosestProvider(domain, maxDistance, domains);
-    const next = match ? value.substring(0, at + 1) + match : null;
-    setSuggestion(next);
-    if (next) onSuggestRef.current?.(next);
-  }, [maxDistance, domains]);
 
   useEffect(() => {
     if (disabled) return;
@@ -78,22 +72,16 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
 
     const input = matches[0];
     inputRef.current = input;
+    setEmail(input.value);
 
     const handleInput = () => {
-      const v = input.value;
-      const at = v.indexOf('@');
-
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (at !== -1 && at < v.length - 1) {
-        timerRef.current = setTimeout(() => compute(v), debounceMs);
-      } else {
-        setSuggestion(null);
-      }
+      timerRef.current = setTimeout(() => setEmail(input.value), debounceMs);
     };
 
     const handleBlur = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      compute(input.value);
+      setEmail(input.value);
     };
 
     input.addEventListener('input', handleInput);
@@ -104,53 +92,39 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
       input.removeEventListener('blur', handleBlur);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [id, debounceMs, compute, disabled]);
+  }, [id, debounceMs, disabled]);
 
-  const handleApply = useCallback(() => {
-    if (!suggestion || !inputRef.current) return;
-    const nativeSet = Object.getOwnPropertyDescriptor(
-      HTMLInputElement.prototype, 'value'
-    )?.set;
-    if (nativeSet) {
-      nativeSet.call(inputRef.current, suggestion);
-      inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
-    } else {
-      inputRef.current.value = suggestion;
+  const handleAccept = useCallback((corrected: string) => {
+    if (inputRef.current) {
+      const nativeSet = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype, 'value'
+      )?.set;
+      if (nativeSet) {
+        nativeSet.call(inputRef.current, corrected);
+        inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+      } else {
+        inputRef.current.value = corrected;
+      }
     }
-    onAccept?.(suggestion);
-    setSuggestion(null);
-  }, [suggestion, onAccept]);
+    setEmail(corrected);
+    onAccept?.(corrected);
+  }, [onAccept]);
 
-  const label = warningText ?? 'Dieser Mailprovider ist uns nicht bekannt. Meinten Sie: ';
-
-  return suggestion ? (
-    <div
-      className={warningClassName}
-      role="status"
-      aria-live="polite"
-      style={{ color: '#b45309', fontSize: '0.9em', marginTop: '4px' }}
-    >
-      {label}
-      <button
-        type="button"
-        className={suggestionClassName}
-        onClick={handleApply}
-        style={{
-          background: 'none',
-          border: 0,
-          padding: 0,
-          font: 'inherit',
-          color: '#2563eb',
-          cursor: 'pointer',
-          textDecoration: 'underline',
-          fontWeight: 500,
-        }}
-      >
-        {suggestion}
-      </button>
-      {suffixText}
-    </div>
-  ) : null;
+  return (
+    <EmailSuggestion
+      email={email}
+      onAccept={handleAccept}
+      onSuggest={onSuggest}
+      maxDistance={maxDistance}
+      debounceMs={0}
+      domains={domains}
+      disabled={disabled}
+      warningClassName={warningClassName}
+      suggestionClassName={suggestionClassName}
+      warningText={warningText}
+      suffixText={suffixText}
+    />
+  );
 };
 
 export default DACHSuggestions;
