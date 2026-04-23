@@ -3,11 +3,16 @@ export const DACH_DOMAINS: readonly string[] = [
   // Germany
   'gmx.de',
   'gmx.net',
+  'gmx.com',
   'web.de',
+  'mail.de',
+  'kabelmail.de',
   't-online.de',
   'freenet.de',
   'posteo.de',
   'mailbox.org',
+  'tutanota.com',
+  'tutanota.de',
   '1und1.de',
   'ionos.de',
   'arcor.de',
@@ -21,10 +26,13 @@ export const DACH_DOMAINS: readonly string[] = [
   'chello.at',
   'three.at',
   'magenta.at',
+  'inode.at',
+  'live.at',
 
   // Switzerland
   'gmx.ch',
   'bluewin.ch',
+  'bluemail.ch',
   'sunrise.ch',
   'hispeed.ch',
   'swissonline.ch',
@@ -120,20 +128,30 @@ export function damerauLevenshteinDistance(
 /**
  * Find the closest known domain using Damerau-Levenshtein distance.
  * Returns null if the domain is already known or no close match exists.
+ *
+ * @param inputDomain - Domain to check (e.g., "gmial.com")
+ * @param maxDistance - Max edit distance (default 2)
+ * @param domains - Domain list to check against (default: DACH_DOMAINS).
+ *   Import DACH_DOMAINS and spread to extend: `[...DACH_DOMAINS, 'company.com']`.
  */
 export function findClosestProvider(
   inputDomain: string,
-  maxDistance: number = 2
+  maxDistance: number = 2,
+  domains: readonly string[] = DACH_DOMAINS
 ): string | null {
   if (!inputDomain) return null;
 
   const domain = inputDomain.toLowerCase();
-  if (KNOWN_DOMAINS_SET.has(domain)) return null;
+
+  const knownSet = domains === DACH_DOMAINS
+    ? KNOWN_DOMAINS_SET
+    : new Set(domains.map(d => d.toLowerCase()));
+  if (knownSet.has(domain)) return null;
 
   let bestDistance = maxDistance + 1;
   let bestMatch: string | null = null;
 
-  for (const provider of DACH_DOMAINS) {
+  for (const provider of domains) {
     const distance = damerauLevenshteinDistance(domain, provider, maxDistance);
     if (distance < bestDistance) {
       bestDistance = distance;
@@ -145,7 +163,17 @@ export function findClosestProvider(
   return bestDistance <= maxDistance ? bestMatch : null;
 }
 
-/** Check if a domain is a known D-A-CH provider. */
-export function isKnownProvider(domain: string): boolean {
-  return KNOWN_DOMAINS_SET.has(domain.toLowerCase());
+/**
+ * Check if a domain is in the given provider list.
+ * @param domain - Domain to check
+ * @param domains - Domain list (default: DACH_DOMAINS)
+ */
+export function isKnownProvider(
+  domain: string,
+  domains: readonly string[] = DACH_DOMAINS
+): boolean {
+  const set = domains === DACH_DOMAINS
+    ? KNOWN_DOMAINS_SET
+    : new Set(domains.map(d => d.toLowerCase()));
+  return set.has(domain.toLowerCase());
 }
