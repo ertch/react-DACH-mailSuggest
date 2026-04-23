@@ -2,7 +2,7 @@
 
 React library that catches email domain typos for the D-A-CH region.
 
-## Install
+## Install (WIP)
 
 ```bash
 npm install dach-email-suggestion
