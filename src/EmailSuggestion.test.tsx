@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import EmailSuggestion from './EmailSuggestion';
 import { DACH_DOMAINS } from './utils';
 
@@ -48,7 +47,7 @@ describe('EmailSuggestion', () => {
   });
 
   test('onAccept fires with corrected value and clears warning', () => {
-    const onAccept = jest.fn();
+    const onAccept = vi.fn();
     render(<Controlled initial="user@gmial.com" onAccept={onAccept} />);
 
     fireEvent.click(screen.getByRole('button'));
@@ -89,7 +88,7 @@ describe('EmailSuggestion', () => {
   });
 
   test('onSuggest fires whenever a suggestion is shown', () => {
-    const onSuggest = jest.fn();
+    const onSuggest = vi.fn();
     const { rerender } = render(
       <Controlled initial="user@gmial.com" onSuggest={onSuggest} />
     );
@@ -127,5 +126,15 @@ describe('EmailSuggestion', () => {
 
     fireEvent.click(screen.getByText('break'));
     expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  test('emailPattern suppresses suggestion that does not match', () => {
+    render(<Controlled initial="user@gmial.com" emailPattern={/^[^@]+@company\.com$/} />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  test('emailPattern allows suggestion that matches', () => {
+    render(<Controlled initial="user@gmial.com" emailPattern={/^[^@]+@gmail\.com$/} />);
+    expect(screen.getByRole('button')).toHaveTextContent('user@gmail.com');
   });
 });

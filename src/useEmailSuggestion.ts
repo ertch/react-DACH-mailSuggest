@@ -13,6 +13,8 @@ export interface UseEmailSuggestionOptions {
   domains?: readonly string[];
   /** Skip detection entirely (suggestion stays null) */
   disabled?: boolean;
+  /** Optional regex the corrected email must match; suggestion is suppressed if it doesn't. */
+  emailPattern?: RegExp;
 }
 
 export interface UseEmailSuggestionResult {
@@ -28,12 +30,16 @@ export interface UseEmailSuggestionResult {
 function compute(
   email: string,
   maxDistance: number,
-  domains: readonly string[] | undefined
+  domains: readonly string[] | undefined,
+  emailPattern: RegExp | undefined
 ): string | null {
   const at = email.indexOf('@');
   if (at === -1 || at === email.length - 1) return null;
   const match = findClosestProvider(email.substring(at + 1), maxDistance, domains);
-  return match ? email.substring(0, at + 1) + match : null;
+  if (!match) return null;
+  const corrected = email.substring(0, at + 1) + match;
+  if (emailPattern && !emailPattern.test(corrected)) return null;
+  return corrected;
 }
 
 /**
@@ -52,17 +58,11 @@ export function useEmailSuggestion(
     debounceMs = 300,
     domains,
     disabled = false,
+    emailPattern,
   } = options;
 
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const emailRef = useRef(email);
-  emailRef.current = email;
-  const maxDistanceRef = useRef(maxDistance);
-  maxDistanceRef.current = maxDistance;
-  const domainsRef = useRef(domains);
-  domainsRef.current = domains;
 
   useEffect(() => {
     if (disabled) {
@@ -70,7 +70,7 @@ export function useEmailSuggestion(
       return;
     }
 
-    const run = () => setSuggestion(compute(email, maxDistance, domains));
+    const run = () => setSuggestion(compute(email, maxDistance, domains, emailPattern));
 
     if (debounceMs <= 0) {
       run();
@@ -83,10 +83,10 @@ export function useEmailSuggestion(
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [email, maxDistance, debounceMs, disabled, domains]);
+  }, [email, maxDistance, debounceMs, disabled, domains, emailPattern]);
 
   const getCorrected = () =>
-    disabled ? null : compute(emailRef.current, maxDistanceRef.current, domainsRef.current);
+    disabled ? null : compute(email, maxDistance, domains, emailPattern);
 
   return { suggestion, getCorrected };
 }

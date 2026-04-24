@@ -23,6 +23,8 @@ export interface DACHSuggestionsProps {
   domains?: readonly string[];
   /** Disable typo detection (no listeners attached) */
   disabled?: boolean;
+  /** Optional regex the corrected email must match; suggestion is suppressed if it doesn't. */
+  emailPattern?: RegExp;
   /** Fires when a suggestion is displayed */
   onSuggest?: (suggestion: string) => void;
   /** Fires when the user accepts the suggestion */
@@ -46,11 +48,11 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
   suffixText,
   domains,
   disabled = false,
+  emailPattern,
   onSuggest,
   onAccept,
 }) => {
   const [email, setEmail] = useState('');
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -74,15 +76,8 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
     inputRef.current = input;
     setEmail(input.value);
 
-    const handleInput = () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setEmail(input.value), debounceMs);
-    };
-
-    const handleBlur = () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      setEmail(input.value);
-    };
+    const handleInput = () => setEmail(input.value);
+    const handleBlur = () => setEmail(input.value);
 
     input.addEventListener('input', handleInput);
     input.addEventListener('blur', handleBlur);
@@ -90,9 +85,8 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
     return () => {
       input.removeEventListener('input', handleInput);
       input.removeEventListener('blur', handleBlur);
-      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [id, debounceMs, disabled]);
+  }, [id, disabled]);
 
   const handleAccept = useCallback((corrected: string) => {
     if (inputRef.current) {
@@ -116,9 +110,10 @@ const DACHSuggestions: React.FC<DACHSuggestionsProps> = ({
       onAccept={handleAccept}
       onSuggest={onSuggest}
       maxDistance={maxDistance}
-      debounceMs={0}
+      debounceMs={debounceMs}
       domains={domains}
       disabled={disabled}
+      emailPattern={emailPattern}
       warningClassName={warningClassName}
       suggestionClassName={suggestionClassName}
       warningText={warningText}

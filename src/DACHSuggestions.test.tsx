@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { render, screen, act } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import DACHSuggestions from './DACHSuggestions';
 import { DACH_DOMAINS } from './utils';
 
@@ -164,7 +163,7 @@ describe('DACHSuggestions', () => {
   });
 
   test('onSuggest fires with the suggested value', () => {
-    const onSuggest = jest.fn();
+    const onSuggest = vi.fn();
     render(
       <div>
         <input type="email" data-dach-suggestion="cb1" data-testid="email6" />
@@ -178,7 +177,7 @@ describe('DACHSuggestions', () => {
   });
 
   test('onAccept fires when the user clicks the suggestion', () => {
-    const onAccept = jest.fn();
+    const onAccept = vi.fn();
     render(
       <div>
         <input type="email" data-dach-suggestion="cb2" data-testid="email7" />
@@ -190,5 +189,29 @@ describe('DACHSuggestions', () => {
 
     act(() => { screen.getByRole('button').click(); });
     expect(onAccept).toHaveBeenCalledWith('user@gmail.com');
+  });
+
+  test('emailPattern suppresses suggestion that does not match', () => {
+    render(
+      <div>
+        <input type="email" data-dach-suggestion="pat" data-testid="email8" />
+        <DACHSuggestions id="pat" debounceMs={0} emailPattern={/^[^@]+@company\.com$/} />
+      </div>
+    );
+    const input = screen.getByTestId('email8') as HTMLInputElement;
+    typeAndBlur(input, 'user@gmial.com');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  test('emailPattern allows suggestion that matches', () => {
+    render(
+      <div>
+        <input type="email" data-dach-suggestion="pat2" data-testid="email9" />
+        <DACHSuggestions id="pat2" debounceMs={0} emailPattern={/^[^@]+@gmail\.com$/} />
+      </div>
+    );
+    const input = screen.getByTestId('email9') as HTMLInputElement;
+    typeAndBlur(input, 'user@gmial.com');
+    expect(screen.getByRole('button')).toHaveTextContent('user@gmail.com');
   });
 });

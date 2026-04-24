@@ -10,8 +10,6 @@ export type {
 export { default as DACHSuggestions } from './DACHSuggestions';
 export type { DACHSuggestionsProps } from './DACHSuggestions';
 
-export { default } from './DACHSuggestions';
-
 export {
   DACH_DOMAINS,
   findClosestProvider,

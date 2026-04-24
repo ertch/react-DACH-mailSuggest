@@ -3,8 +3,8 @@ import { useEmailSuggestion } from './useEmailSuggestion';
 import { DACH_DOMAINS } from './utils';
 
 describe('useEmailSuggestion', () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
   test('returns null suggestion when email is empty', () => {
     const { result } = renderHook(() => useEmailSuggestion('', { debounceMs: 0 }));
@@ -34,9 +34,9 @@ describe('useEmailSuggestion', () => {
   test('debounce delays state update', () => {
     const { result } = renderHook(() => useEmailSuggestion('user@gmial.com', { debounceMs: 500 }));
     expect(result.current.suggestion).toBeNull();
-    act(() => { jest.advanceTimersByTime(499); });
+    act(() => { vi.advanceTimersByTime(499); });
     expect(result.current.suggestion).toBeNull();
-    act(() => { jest.advanceTimersByTime(1); });
+    act(() => { vi.advanceTimersByTime(1); });
     expect(result.current.suggestion).toBe('user@gmail.com');
   });
 
@@ -45,11 +45,11 @@ describe('useEmailSuggestion', () => {
       ({ email }) => useEmailSuggestion(email, { debounceMs: 300 }),
       { initialProps: { email: 'a@gmial.com' } }
     );
-    act(() => { jest.advanceTimersByTime(200); });
+    act(() => { vi.advanceTimersByTime(200); });
     rerender({ email: 'b@gmial.com' });
-    act(() => { jest.advanceTimersByTime(200); });
+    act(() => { vi.advanceTimersByTime(200); });
     expect(result.current.suggestion).toBeNull();
-    act(() => { jest.advanceTimersByTime(100); });
+    act(() => { vi.advanceTimersByTime(100); });
     expect(result.current.suggestion).toBe('b@gmail.com');
   });
 
@@ -87,5 +87,26 @@ describe('useEmailSuggestion', () => {
       useEmailSuggestion('user@totallydifferent.com', { debounceMs: 0, maxDistance: 2 })
     );
     expect(result.current.suggestion).toBeNull();
+  });
+
+  test('emailPattern suppresses suggestion that does not match', () => {
+    const { result } = renderHook(() =>
+      useEmailSuggestion('user@gmial.com', {
+        debounceMs: 0,
+        emailPattern: /^[^@]+@company\.com$/,
+      })
+    );
+    expect(result.current.suggestion).toBeNull();
+    expect(result.current.getCorrected()).toBeNull();
+  });
+
+  test('emailPattern allows suggestion that matches', () => {
+    const { result } = renderHook(() =>
+      useEmailSuggestion('user@gmial.com', {
+        debounceMs: 0,
+        emailPattern: /^[^@]+@gmail\.com$/,
+      })
+    );
+    expect(result.current.suggestion).toBe('user@gmail.com');
   });
 });
